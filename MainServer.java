@@ -54,6 +54,9 @@ class Account {
 
 
     public String deposit(double amount, String currency) throws IOException {
+        if (amount <= 0) {
+            return "Error: Amount must be greater than 0.";
+        }
         double rate = rateProvider.getRate(currency, "USD");
         double usd = amount * rate;
         usdBalance += usd;
@@ -61,6 +64,9 @@ class Account {
     }
 
     public String withdraw(double amountUSD) {
+        if (amountUSD <= 0) {
+            return "Error: Amount must be greater than 0.";
+        }
         if (amountUSD > usdBalance) {
             return "Error: Withdraw failed. Not enough USD balance.";
         }
@@ -69,6 +75,9 @@ class Account {
     }
 
     public String exchangeTo(String targetCurrency, double amountUSD) throws IOException {
+        if (amountUSD <= 0) {
+            return "Error: Amount must be greater than 0.";
+        }
         if (targetCurrency.equalsIgnoreCase("USD")) {
             return "Error: Cannot convert back to USD!";
         }
@@ -96,6 +105,9 @@ class Account {
     }
 
     public String exchangeFrom(String sourceCurrency, double amountForeign) throws IOException {
+        if (amountForeign <= 0) {
+            return "Error: Amount must be greater than 0.";
+        }
         if (sourceCurrency.equalsIgnoreCase("USD")) {
             return "Error: Cannot exchange USD from USD!";
         }
