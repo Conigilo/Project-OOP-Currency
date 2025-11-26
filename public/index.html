@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Currency Exchange</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <div class="logo">
+                <i class="fa-solid fa-building-columns"></i>
+                <div>
+                    <h1>Currency Exchange</h1>
+                    <p>Java Backend System</p>
+                </div>
+            </div>
+            <div class="mini-balance">
+                <span>USD Balance:</span>
+                <strong id="header-balance">Loading...</strong>
+            </div>
+        </header>
+
+        <div id="main-menu" class="menu-grid">
+            <div class="menu-card" onclick="openFeature('deposit-section')">
+                <i class="fa-solid fa-wallet"></i>
+                <h3>Deposit</h3>
+                <p>Add money to account</p>
+            </div>
+
+            <div class="menu-card" onclick="openFeature('withdraw-section')">
+                <i class="fa-solid fa-money-bill-wave"></i>
+                <h3>Withdraw</h3>
+                <p>Cash out USD</p>
+            </div>
+
+            <div class="menu-card" onclick="openFeature('exchange-to-section')">
+                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                <h3>USD &rarr; Foreign</h3>
+                <p>Buy foreign currency</p>
+            </div>
+
+            <div class="menu-card" onclick="openFeature('portfolio-section')">
+                <i class="fa-solid fa-chart-pie"></i>
+                <h3>View Portfolio</h3>
+                <p>Check all assets</p>
+            </div>
+
+            <div class="menu-card" onclick="openFeature('rates-section')">
+                <i class="fa-solid fa-globe"></i>
+                <h3>Exchange Rates</h3>
+                <p>Check market price</p>
+            </div>
+
+            <div class="menu-card" onclick="openFeature('exchange-from-section')">
+                <i class="fa-solid fa-rotate-left"></i>
+                <h3>Foreign &rarr; USD</h3>
+                <p>Sell foreign currency</p>
+            </div>
+        </div>
+
+        <div id="feature-container" class="hidden">
+            <button class="back-btn" onclick="goHome()">
+                <i class="fa-solid fa-arrow-left"></i> Back to Menu
+            </button>
+
+            <div id="deposit-section" class="feature-box hidden">
+                <h2><i class="fa-solid fa-wallet"></i> Deposit Money</h2>
+                <div class="form-group">
+                    <input type="number" id="dep-amount" placeholder="Amount">
+                    <select id="dep-curr">
+                        <option value="USD">USD</option>
+                        <option value="THB">THB</option>
+                        <option value="JPY">JPY</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                    <button onclick="deposit()" class="btn-action">Confirm Deposit</button>
+                </div>
+            </div>
+
+            <div id="withdraw-section" class="feature-box hidden">
+                <h2><i class="fa-solid fa-money-bill-wave"></i> Withdraw USD</h2>
+                <div class="form-group">
+                    <input type="number" id="wd-amount" placeholder="Amount USD">
+                    <button onclick="withdraw()" class="btn-action red">Confirm Withdraw</button>
+                </div>
+            </div>
+
+            <div id="exchange-to-section" class="feature-box hidden">
+                <h2><i class="fa-solid fa-arrow-right-arrow-left"></i> Exchange (USD &rarr; Foreign)</h2>
+                <div class="form-group">
+                    <input type="number" id="ex-amount" placeholder="Amount USD">
+                    <select id="ex-target">
+                        <option value="EUR">EUR</option>
+                        <option value="JPY">JPY</option>
+                        <option value="THB">THB</option>
+                    </select>
+                    <button onclick="exchangeTo()" class="btn-action purple">Exchange</button>
+                </div>
+            </div>
+
+            <div id="portfolio-section" class="feature-box hidden">
+                <h2><i class="fa-solid fa-chart-pie"></i> Your Portfolio</h2>
+                <div id="portfolio-list" class="list-view">
+                    </div>
+            </div>
+
+            <div id="rates-section" class="feature-box hidden">
+                <h2><i class="fa-solid fa-globe"></i> Check Rates</h2>
+                <p>Base Currency: <strong>USD</strong></p>
+                <div class="form-group">
+                    <select id="rate-target">
+                        <option value="EUR">EUR</option>
+                        <option value="JPY">JPY</option>
+                        <option value="THB">THB</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                    <button onclick="checkRate()" class="btn-action blue">Check Now</button>
+                </div>
+                <div id="rate-result" class="result-box"></div>
+            </div>
+
+            <div id="exchange-from-section" class="feature-box hidden">
+                <h2><i class="fa-solid fa-rotate-left"></i> Exchange Back (Foreign &rarr; USD)</h2>
+                <div class="form-group">
+                    <select id="ex-back-source">
+                        <option value="EUR">EUR</option>
+                        <option value="JPY">JPY</option>
+                        <option value="THB">THB</option>
+                    </select>
+                    <input type="number" id="ex-back-amount" placeholder="Amount Foreign">
+                    <button onclick="exchangeBack()" class="btn-action orange">Exchange Back</button>
+                </div>
+            </div>
+
+            <p id="status-msg" class="status"></p>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
