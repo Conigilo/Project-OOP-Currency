@@ -6,9 +6,10 @@ import java.net.InetSocketAddress;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Scanner;
+import java.util.Collections;
 import org.json.JSONObject;
 
 interface RateProvider {
@@ -16,158 +17,147 @@ interface RateProvider {
 }
 
 class ApiRateProvider implements RateProvider {
-
     @Override
     public double getRate(String from, String to) throws IOException {
-        // เพิ่มบรรทัดนี้: ถ้าสกุลเงินเหมือนกัน ให้คืนค่า 1.0 ทันที ไม่ต้องยิง API
-        if (from.equalsIgnoreCase(to)) {
+        if (from.equalsIgnoreCase(to))
             return 1.0;
-        }
         String api = "https://api.frankfurter.dev/v1/latest?base=" + from + "&symbols=" + to;
-
         HttpURLConnection conn = (HttpURLConnection) new URL(api).openConnection();
         conn.setRequestMethod("GET");
-
+        conn.setConnectTimeout(5000);
         BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
         StringBuilder json = new StringBuilder();
         String line;
-
-        while ((line = br.readLine()) != null) {
+        while ((line = br.readLine()) != null)
             json.append(line);
-        }
         br.close();
-
         JSONObject obj = new JSONObject(json.toString());
+        if (!obj.has("rates") || !obj.getJSONObject("rates").has(to))
+            throw new IOException("Rate not found");
         return obj.getJSONObject("rates").getDouble(to);
     }
 }
 
 class Account {
-    // เปลี่ยนเป็น public เพื่อให้ Server ดึงค่าไปโชว์ได้ง่ายๆ
-    public double usdBalance = 0.0;
-    public Map<String, Double> foreignHoldings = new HashMap<>();
+    private double usdBalance = 0.0;
+    private Map<String, Double> foreignHoldings = new HashMap<>();
     private RateProvider rateProvider;
 
     public Account(RateProvider rateProvider) {
         this.rateProvider = rateProvider;
     }
 
+    public double getUsdBalance() {
+        return this.usdBalance;
+    }
+
+    public Map<String, Double> getForeignHoldings() {
+        return Collections.unmodifiableMap(this.foreignHoldings);
+    }
 
     public String deposit(double amount, String currency) throws IOException {
-        if (amount <= 0) {
-            return "Error: Amount must be greater than 0.";
+        if (amount <= 0)
+            return "จำนวนเงินต้องมากกว่า 0";
+        if (currency.equalsIgnoreCase("USD"))
+            usdBalance += amount;
+        else {
+            try {
+                rateProvider.getRate(currency, "USD");
+            } catch (IOException e) {
+                return "สกุลเงินไม่ถูกต้อง";
+            }
+            foreignHoldings.put(currency, foreignHoldings.getOrDefault(currency, 0.0) + amount);
         }
-        double rate = rateProvider.getRate(currency, "USD");
-        double usd = amount * rate;
-        usdBalance += usd;
-        return "DEPOSIT: " + amount + " " + currency + " => " + String.format("%.2f", usd) + " USD stored.";
+        return "Success";
     }
 
-    public String withdraw(double amountUSD) {
-        if (amountUSD <= 0) {
-            return "Error: Amount must be greater than 0.";
+    public String withdraw(double amount, String currency) {
+        if (amount <= 0)
+            return "จำนวนเงินต้องมากกว่า 0";
+        if (currency.equalsIgnoreCase("USD")) {
+            if (amount > usdBalance)
+                return "จำนวนเงินไม่เพียงพอใน USD";
+            usdBalance -= amount;
+        } else {
+            if (!foreignHoldings.containsKey(currency))
+                return "ไม่มี " + currency;
+            if (amount > foreignHoldings.get(currency))
+                return "จำนวนเงินไม่เพียงพอใน " + currency;
+            foreignHoldings.put(currency, foreignHoldings.get(currency) - amount);
+            if (foreignHoldings.get(currency) <= 0)
+                foreignHoldings.remove(currency);
         }
-        if (amountUSD > usdBalance) {
-            return "Error: Withdraw failed. Not enough USD balance.";
-        }
-        usdBalance -= amountUSD;
-        return "WITHDRAW: " + amountUSD + " USD successful.";
+        return "Success";
     }
 
-    public String exchangeTo(String targetCurrency, double amountUSD) throws IOException {
-        if (amountUSD <= 0) {
-            return "Error: Amount must be greater than 0.";
-        }
-        if (targetCurrency.equalsIgnoreCase("USD")) {
-            return "Error: Cannot convert back to USD!";
-        }
-        if (amountUSD > usdBalance) {
-            return "Error: Not enough USD to exchange.";
-        }
-
-        double rate = rateProvider.getRate("USD", targetCurrency);
+    public String exchangeTo(String target, double amountUSD) throws IOException {
+        if (amountUSD <= 0)
+            return "Error: Amount > 0";
+        if (amountUSD > usdBalance)
+            return "จำนวนเงินไม่เพียงพอใน USD";
+        double rate = rateProvider.getRate("USD", target);
         double foreignAmount = amountUSD * rate;
-
         usdBalance -= amountUSD;
-        foreignHoldings.put(targetCurrency, foreignHoldings.getOrDefault(targetCurrency, 0.0) + foreignAmount);
-
-        return "EXCHANGE: " + amountUSD + " USD => " + String.format("%.2f", foreignAmount) + " " + targetCurrency;
+        foreignHoldings.put(target, foreignHoldings.getOrDefault(target, 0.0) + foreignAmount);
+        return "Bought " + String.format("%.2f", foreignAmount) + " " + target;
     }
 
-    public String viewrateexchange(String targetCurrency) throws IOException {
-        if (targetCurrency.equalsIgnoreCase("USD")) return "Cannot convert back to USD!";
-        
-        double rate = rateProvider.getRate("USD", targetCurrency);
-        double simulatedAmount = (usdBalance > 0) ? usdBalance * rate : 0;
-        
-        return String.format("Rate (USD->%s): %.4f. Your %.2f USD ≈ %.2f %s", 
-               targetCurrency, rate, usdBalance, simulatedAmount, targetCurrency);
-    }
-
-    public String exchangeFrom(String sourceCurrency, double amountForeign) throws IOException {
-        if (amountForeign <= 0) {
-            return "Error: Amount must be greater than 0.";
-        }
-        if (sourceCurrency.equalsIgnoreCase("USD")) {
-            return "Error: Cannot exchange USD from USD!";
-        }
-        if (!foreignHoldings.containsKey(sourceCurrency) || foreignHoldings.get(sourceCurrency) < amountForeign) {
-            return String.format("Error: Not enough %s holdings.", sourceCurrency);
-        }
-
-        double rate = rateProvider.getRate(sourceCurrency, "USD");
+    public String exchangeFrom(String source, double amountForeign) throws IOException {
+        if (amountForeign <= 0)
+            return "จำนวนเงินต้องมากกว่า 0";
+        if (!foreignHoldings.containsKey(source) || foreignHoldings.get(source) < amountForeign)
+            return "จำนวนเงินไม่เพียงพอใน " + source;
+        double rate = rateProvider.getRate(source, "USD");
         double usdAmount = amountForeign * rate;
-
-        foreignHoldings.put(sourceCurrency, foreignHoldings.get(sourceCurrency) - amountForeign);
-        if (foreignHoldings.get(sourceCurrency) < 0.0001) {
-            foreignHoldings.remove(sourceCurrency);
-        }
+        foreignHoldings.put(source, foreignHoldings.get(source) - amountForeign);
+        if (foreignHoldings.get(source) <= 0)
+            foreignHoldings.remove(source);
         usdBalance += usdAmount;
+        return "Sold for " + String.format("%.2f", usdAmount) + " USD";
+    }
 
-        return String.format("EXCHANGE BACK: %.2f %s => %.2f USD successful.", amountForeign, sourceCurrency, usdAmount);
+    public double getTotalWorthInUSD() {
+        double total = this.usdBalance;
+        for (Map.Entry<String, Double> entry : foreignHoldings.entrySet()) {
+            try {
+                total += entry.getValue() * rateProvider.getRate(entry.getKey(), "USD");
+            } catch (Exception e) {
+            }
+        }
+        return total;
     }
 }
 
-// ==========================================
-// ส่วนที่ 2: Server Config (Web Backend)
-// ==========================================
-
 public class MainServer {
-    // สร้าง Object Account และ Provider ตามแบบเดิมเป๊ะ
     static RateProvider provider = new ApiRateProvider();
     static Account account = new Account(provider);
 
     public static void main(String[] args) throws IOException {
         int port = 8080;
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
-
-        // Handler 1: ส่งหน้าเว็บ (HTML/CSS/JS)
         server.createContext("/", new StaticFileHandler());
-
-        // Handler 2: เชื่อมต่อ API กับ Account Class
         server.createContext("/api/action", new ApiHandler());
-
         server.setExecutor(null);
-        System.out.println("🚀 SERVER STARTED: http://localhost:" + port);
+        System.out.println("✅ SERVER STARTED: http://localhost:" + port);
         server.start();
     }
-
-    // --- Helper Classes สำหรับ Server ---
 
     static class StaticFileHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange t) throws IOException {
             String path = t.getRequestURI().getPath();
-            if (path.equals("/")) path = "/index.html"; 
+            if (path.equals("/"))
+                path = "/index.html";
             File file = new File("public" + path);
-
             if (file.exists()) {
-                String contentType = "text/plain";
-                if (path.endsWith(".html")) contentType = "text/html";
-                else if (path.endsWith(".css")) contentType = "text/css";
-                else if (path.endsWith(".js")) contentType = "application/javascript";
-
-                t.getResponseHeaders().set("Content-Type", contentType);
+                String ct = "text/plain";
+                if (path.endsWith(".html"))
+                    ct = "text/html";
+                else if (path.endsWith(".css"))
+                    ct = "text/css";
+                else if (path.endsWith(".js"))
+                    ct = "application/javascript";
+                t.getResponseHeaders().set("Content-Type", ct);
                 t.sendResponseHeaders(200, file.length());
                 OutputStream os = t.getResponseBody();
                 Files.copy(file.toPath(), os);
@@ -186,47 +176,62 @@ public class MainServer {
         @Override
         public void handle(HttpExchange t) throws IOException {
             String query = t.getRequestURI().getQuery();
-            Map<String, String> params = queryToMap(query);
+            Map<String, String> params = new HashMap<>();
+            if (query != null)
+                for (String p : query.split("&")) {
+                    String[] s = p.split("=");
+                    if (s.length > 1)
+                        params.put(s[0], s[1]);
+                }
+
             String action = params.get("action");
-            
             JSONObject json = new JSONObject();
             String message = "";
 
             try {
-                // เรียกใช้ฟังก์ชันเดิมตาม Action ที่ส่งมา
-                if ("deposit".equals(action)) {
-                    double amt = Double.parseDouble(params.get("amount"));
-                    String curr = params.get("currency");
-                    message = account.deposit(amt, curr); // เรียกฟังก์ชันเดิม
-                } 
-                else if ("withdraw".equals(action)) {
-                    double amt = Double.parseDouble(params.get("amount"));
-                    message = account.withdraw(amt); // เรียกฟังก์ชันเดิม
-                }
-                else if ("exchange".equals(action)) { // USD -> Foreign
-                    double amt = Double.parseDouble(params.get("amount"));
+                if ("getRate".equals(action)) {
+                    json.put("rate", provider.getRate(params.get("base"), params.get("target")));
+                } else if ("getHistory".equals(action)) {
                     String target = params.get("target");
-                    message = account.exchangeTo(target, amt); // เรียกฟังก์ชันเดิม
-                }
-                else if ("exchangeBack".equals(action)) { // Foreign -> USD
-                    double amt = Double.parseDouble(params.get("amount")); // amount foreign
-                    String source = params.get("source"); // currency
-                    message = account.exchangeFrom(source, amt); // เรียกฟังก์ชันเดิม
-                }
-                else if ("check".equals(action)) {
-                    message = "Updated Portfolio";
-                }
+                    LocalDate end = LocalDate.now();
+                    LocalDate start = end.minusDays(30);
+                    String api = "https://api.frankfurter.dev/v1/" + start + ".." + end + "?base=USD&symbols=" + target;
+                    HttpURLConnection conn = (HttpURLConnection) new URL(api).openConnection();
+                    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = br.readLine()) != null)
+                        sb.append(line);
+                    t.getResponseHeaders().set("Content-Type", "application/json");
+                    t.sendResponseHeaders(200, sb.length());
+                    OutputStream os = t.getResponseBody();
+                    os.write(sb.toString().getBytes());
+                    os.close();
+                    return;
+                } else {
+                    if ("deposit".equals(action))
+                        message = account.deposit(Double.parseDouble(params.get("amount")), params.get("currency"));
+                    else if ("withdraw".equals(action))
+                        message = account.withdraw(Double.parseDouble(params.get("amount")), params.get("currency"));
+                    else if ("exchange".equals(action))
+                        message = account.exchangeTo(params.get("target"), Double.parseDouble(params.get("amount")));
+                    else if ("exchangeBack".equals(action))
+                        message = account.exchangeFrom(params.get("source"), Double.parseDouble(params.get("amount")));
+                    else if ("check".equals(action))
+                        message = "Updated";
 
-                if(message.startsWith("Error")) json.put("error", message);
-                else json.put("msg", message);
-
+                    if (message.startsWith("Error"))
+                        json.put("error", message);
+                    else
+                        json.put("msg", message);
+                }
             } catch (Exception e) {
-                json.put("error", "System Error: " + e.getMessage());
+                json.put("error", e.getMessage());
             }
 
-            // ส่งข้อมูลล่าสุดกลับไปอัปเดตหน้าจอ
-            json.put("usd", account.usdBalance);
-            json.put("foreign", account.foreignHoldings);
+            json.put("totalWorth", account.getTotalWorthInUSD());
+            json.put("usd", account.getUsdBalance());
+            json.put("foreign", account.getForeignHoldings());
 
             String response = json.toString();
             t.getResponseHeaders().set("Content-Type", "application/json");
@@ -234,16 +239,6 @@ public class MainServer {
             OutputStream os = t.getResponseBody();
             os.write(response.getBytes());
             os.close();
-        }
-
-        private Map<String, String> queryToMap(String query) {
-            Map<String, String> result = new HashMap<>();
-            if (query == null) return result;
-            for (String param : query.split("&")) {
-                String[] entry = param.split("=");
-                if (entry.length > 1) result.put(entry[0], entry[1]);
-            }
-            return result;
         }
     }
 }

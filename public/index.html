@@ -1,146 +1,243 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Currency Exchange</title>
+    <title>Multi-Currency Wallet</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-
-    <div class="app-container">
+    <div class="container">
         <header>
-            <div class="logo">
-                <i class="fa-solid fa-building-columns"></i>
-                <div>
+            <div class="logo-section">
+                <div class="logo">🏛️</div>
+                <div class="title-group">
                     <h1>Currency Exchange</h1>
-                    <p>Java Backend System</p>
+                    <p>Multi-Currency Wallet System</p>
                 </div>
-            </div>
-            <div class="mini-balance">
-                <span>USD Balance:</span>
-                <strong id="header-balance">Loading...</strong>
             </div>
         </header>
 
-        <div id="main-menu" class="menu-grid">
-            <div class="menu-card" onclick="openFeature('deposit-section')">
-                <i class="fa-solid fa-wallet"></i>
-                <h3>Deposit</h3>
-                <p>Add money to account</p>
-            </div>
-
-            <div class="menu-card" onclick="openFeature('withdraw-section')">
-                <i class="fa-solid fa-money-bill-wave"></i>
-                <h3>Withdraw</h3>
-                <p>Cash out USD</p>
-            </div>
-
-            <div class="menu-card" onclick="openFeature('exchange-to-section')">
-                <i class="fa-solid fa-arrow-right-arrow-left"></i>
-                <h3>USD &rarr; Foreign</h3>
-                <p>Buy foreign currency</p>
-            </div>
-
-            <div class="menu-card" onclick="openFeature('portfolio-section')">
-                <i class="fa-solid fa-chart-pie"></i>
-                <h3>View Portfolio</h3>
-                <p>Check all assets</p>
-            </div>
-
-            <div class="menu-card" onclick="openFeature('rates-section')">
-                <i class="fa-solid fa-globe"></i>
-                <h3>Exchange Rates</h3>
-                <p>Check market price</p>
-            </div>
-
-            <div class="menu-card" onclick="openFeature('exchange-from-section')">
-                <i class="fa-solid fa-rotate-left"></i>
-                <h3>Foreign &rarr; USD</h3>
-                <p>Sell foreign currency</p>
+        <div class="portfolio-summary">
+            <div class="balance-label">มูลค่าพอร์ตโฟลิโอทั้งหมด (Total Portfolio Value)</div>
+            <div class="balance-amount">
+                <span class="currency-symbol">$</span>
+                <span id="totalValue">0.00</span>
             </div>
         </div>
 
-        <div id="feature-container" class="hidden">
-            <button class="back-btn" onclick="goHome()">
-                <i class="fa-solid fa-arrow-left"></i> Back to Menu
-            </button>
+        <div class="actions-section">
+            <h2 class="section-title">🎯 เลือกรายการที่ต้องการทำ (Select Action)</h2>
+            <div class="actions-grid">
+                <div class="action-card" onclick="openDepositModal()">
+                    <div class="action-icon">💰</div>
+                    <div class="action-title">Deposit</div>
+                    <div class="action-description">ฝากเงินทุกสกุลเข้าพอร์ต</div>
+                </div>
 
-            <div id="deposit-section" class="feature-box hidden">
-                <h2><i class="fa-solid fa-wallet"></i> Deposit Money</h2>
-                <div class="form-group">
-                    <input type="number" id="dep-amount" placeholder="Amount">
-                    <select id="dep-curr">
-                        <option value="USD">USD</option>
-                        <option value="THB">THB</option>
-                        <option value="JPY">JPY</option>
-                        <option value="EUR">EUR</option>
-                    </select>
-                    <button onclick="deposit()" class="btn-action">Confirm Deposit</button>
+                <div class="action-card" onclick="openWithdrawModal()">
+                    <div class="action-icon">💵</div>
+                    <div class="action-title">Withdraw</div>
+                    <div class="action-description">ถอนเงินทุกสกุลที่มีในพอร์ต</div>
+                </div>
+
+                <div class="action-card" onclick="openExchangeModal()">
+                    <div class="action-icon">🔄</div>
+                    <div class="action-title">USD → Foreign</div>
+                    <div class="action-description">แลกเงิน USD เป็นสกุลต่างประเทศ</div>
+                </div>
+
+                <div class="action-card" onclick="openExchangeBackModal()">
+                    <div class="action-icon">🔃</div>
+                    <div class="action-title">Foreign → USD</div>
+                    <div class="action-description">แลกเงินสกุลต่างประเทศเป็น USD</div>
+                </div>
+
+                <div class="action-card" onclick="openRatesModal()">
+                    <div class="action-icon">🌐</div>
+                    <div class="action-title">Exchange Rates</div>
+                    <div class="action-description">ตรวจสอบอัตราแลกเปลี่ยน</div>
                 </div>
             </div>
-
-            <div id="withdraw-section" class="feature-box hidden">
-                <h2><i class="fa-solid fa-money-bill-wave"></i> Withdraw USD</h2>
-                <div class="form-group">
-                    <input type="number" id="wd-amount" placeholder="Amount USD">
-                    <button onclick="withdraw()" class="btn-action red">Confirm Withdraw</button>
-                </div>
-            </div>
-
-            <div id="exchange-to-section" class="feature-box hidden">
-                <h2><i class="fa-solid fa-arrow-right-arrow-left"></i> Exchange (USD &rarr; Foreign)</h2>
-                <div class="form-group">
-                    <input type="number" id="ex-amount" placeholder="Amount USD">
-                    <select id="ex-target">
-                        <option value="EUR">EUR</option>
-                        <option value="JPY">JPY</option>
-                        <option value="THB">THB</option>
-                    </select>
-                    <button onclick="exchangeTo()" class="btn-action purple">Exchange</button>
-                </div>
-            </div>
-
-            <div id="portfolio-section" class="feature-box hidden">
-                <h2><i class="fa-solid fa-chart-pie"></i> Your Portfolio</h2>
-                <div id="portfolio-list" class="list-view">
-                    </div>
-            </div>
-
-            <div id="rates-section" class="feature-box hidden">
-                <h2><i class="fa-solid fa-globe"></i> Check Rates</h2>
-                <p>Base Currency: <strong>USD</strong></p>
-                <div class="form-group">
-                    <select id="rate-target">
-                        <option value="EUR">EUR</option>
-                        <option value="JPY">JPY</option>
-                        <option value="THB">THB</option>
-                        <option value="GBP">GBP</option>
-                    </select>
-                    <button onclick="checkRate()" class="btn-action blue">Check Now</button>
-                </div>
-                <div id="rate-result" class="result-box"></div>
-            </div>
-
-            <div id="exchange-from-section" class="feature-box hidden">
-                <h2><i class="fa-solid fa-rotate-left"></i> Exchange Back (Foreign &rarr; USD)</h2>
-                <div class="form-group">
-                    <select id="ex-back-source">
-                        <option value="EUR">EUR</option>
-                        <option value="JPY">JPY</option>
-                        <option value="THB">THB</option>
-                    </select>
-                    <input type="number" id="ex-back-amount" placeholder="Amount Foreign">
-                    <button onclick="exchangeBack()" class="btn-action orange">Exchange Back</button>
-                </div>
-            </div>
-
-            <p id="status-msg" class="status"></p>
         </div>
 
+        <!-- Portfolio Details -->
+        <div style="margin-top: 40px;">
+            <h2 class="section-title">💼 My portfolio</h2>
+            <div class="portfolio-details" id="portfolioDetails">
+                <div style="grid-column: 1/-1; text-align: center; color: #a0a0a0; padding: 40px;">
+                    กำลังโหลดข้อมูล...
+                </div>
+            </div>
+        </div>
     </div>
 
+    <!-- Deposit -->
+    <div id="depositModal" class="modal" onclick="closeDepositModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2 class="modal-title">💰 ฝากเงิน (Deposit)</h2>
+            
+            <div class="form-group">
+                <label>เลือกสกุลเงิน:</label>
+                <select id="depositCurrency">
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="JPY">JPY</option>
+                    <option value="THB">THB</option>
+                    <option value="CNY">CNY</option>
+                    <option value="AUD">AUD</option>
+                    <option value="CAD">CAD</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>จำนวนเงิน:</label>
+                <input type="number" id="depositAmount" placeholder="0.00" step="0.01">
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="handleDeposit()">ยืนยันฝากเงิน</button>
+                <button class="btn btn-secondary" onclick="closeDepositModal()">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdraw Modal -->
+    <div id="withdrawModal" class="modal" onclick="closeWithdrawModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2 class="modal-title">💵 ถอนเงิน (Withdraw)</h2>
+            
+            <div class="form-group">
+                <label>เลือกสกุลเงิน:</label>
+                <select id="withdrawCurrency">
+                    <!-- Options populated dynamically -->
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>จำนวนเงิน:</label>
+                <input type="number" id="withdrawAmount" placeholder="0.00" step="0.01">
+            </div>
+
+            <div class="info-box" id="withdrawInfo">
+                ยอดคงเหลือ: <strong>0.00</strong>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-danger" onclick="handleWithdraw()">ยืนยันถอนเงิน</button>
+                <button class="btn btn-secondary" onclick="closeWithdrawModal()">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exchange USD to Foreign Modal -->
+    <div id="exchangeModal" class="modal" onclick="closeExchangeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2 class="modal-title">🔄 แลก USD → สกุลต่างประเทศ</h2>
+            
+            <div class="form-group">
+                <label>เลือกสกุลเงินที่ต้องการแลกเปลี่ยน:</label>
+                <select id="exchangeCurrency">
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="JPY">JPY</option>
+                    <option value="THB">THB</option>
+                    <option value="CNY">CNY</option>
+                    <option value="AUD">AUD</option>
+                    <option value="CAD">CAD</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>กรอกจำนวน USD ที่ต้องการแลก:</label>
+                <input type="number" id="exchangeAmount" placeholder="0.00" step="0.01">
+            </div>
+
+            <div class="info-box" id="exchangeInfo">
+                ยอด USD คงเหลือ: <strong id="usdBalanceExchange">0.00</strong>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="handleExchange()">ยืนยันแลกเงิน</button>
+                <button class="btn btn-secondary" onclick="closeExchangeModal()">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exchange Foreign to USD Modal -->
+    <div id="exchangeBackModal" class="modal" onclick="closeExchangeBackModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2 class="modal-title">🔃 แลกสกุลต่างประเทศ → USD</h2>
+            
+            <div class="form-group">
+                <label>เลือกสกุลเงินที่ต้องการแลกเปลี่ยน:</label>
+                <select id="exchangeBackCurrency">
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>จำนวนเงินที่ต้องการ (USD):</label>
+                <input type="number" id="exchangeBackAmount" placeholder="0.00" step="0.01">
+            </div>
+
+            <div class="info-box" id="exchangeBackInfo">
+                ยอดคงเหลือ: <strong>0.00</strong>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-danger" onclick="handleExchangeBack()">ยืนยัน</button>
+                <button class="btn btn-secondary" onclick="closeExchangeBackModal()">ยกเลิก</button>
+            </div>
+        </div>
+    </div>
+
+      <!-- Exchange Rates Modal -->
+    <div id="ratesModal" class="modal" onclick="closeRatesModal()">
+        <div class="modal-content modal-large" onclick="event.stopPropagation()">
+            <h2 class="modal-title">🌐 อัตราแลกเปลี่ยน (Exchange Rates)</h2>
+            
+            <div class="form-group">
+                <label>เลือกสกุลเงิน:</label>
+                <select id="rateTarget">
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="GBP">GBP - British Pound</option>
+                    <option value="JPY">JPY - Japanese Yen</option>
+                    <option value="THB" selected>THB - Thai Baht</option>
+                    <option value="CNY">CNY - Chinese Yuan</option>
+                    <option value="AUD">AUD - Australian Dollar</option>
+                    <option value="CAD">CAD - Canadian Dollar</option>
+                </select>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="loadRateHistory()">ดูกราฟ 30 วันย้อนหลัง</button>
+            </div>
+
+            <div id="rateDisplay" style="display: none; margin-top: 30px;">
+                <div class="rate-summary">
+                    <div class="rate-current">
+                        <div class="rate-label">อัตราปัจจุบัน</div>
+                        <div class="rate-value" id="currentRate">--</div>
+                        <div class="rate-pair" id="ratePair">1 USD = ? THB</div>
+                    </div>
+                    <div class="rate-change" id="rateChange">
+                        <div class="rate-label">เปลี่ยนแปลงจากเมื่อวาน</div>
+                        <div class="rate-change-value" id="changeValue">--</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="rateChart"></canvas>
+                </div>
+            </div>
+
+            <div class="button-group" style="margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="closeRatesModal()">ปิด</button>
+            </div>
+        </div>
+    </div>
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
